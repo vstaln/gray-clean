@@ -29,7 +29,7 @@ fn manifest() -> Value {
         "version": env!("CARGO_PKG_VERSION"),
         "protocol": "1.1",
         "tools": [],
-        "description": "sweep",
+        "description": "sweep stale spill and tmp files",
         "commands": ["/clean"],
     })
 }
