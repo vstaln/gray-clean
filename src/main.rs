@@ -31,6 +31,7 @@ fn manifest() -> Value {
         "tools": [],
         "description": "sweep stale spill and tmp files",
         "commands": ["/clean"],
+        "command_descriptions": {"/clean": "sweep old spill and temp files"},
     })
 }
 
