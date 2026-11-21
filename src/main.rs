@@ -113,7 +113,11 @@ fn log_line(log: &Path, line: &Value) {
     if let Some(parent) = log.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(log) {
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log)
+    {
         let _ = writeln!(f, "{line}");
     }
 }
@@ -133,20 +137,22 @@ fn cap_log(log: &Path, cap: usize) {
 /// Delete files under `roots` older than `max_age`, then empty dirs left
 /// behind. Never follows symlinks, never removes the roots themselves.
 fn sweep(roots: &[PathBuf], max_age: Duration, log: &Path, trigger: &str) -> Sweep {
-    let cutoff = SystemTime::now()
-        .checked_sub(max_age)
-        .unwrap_or(UNIX_EPOCH);
+    let cutoff = SystemTime::now().checked_sub(max_age).unwrap_or(UNIX_EPOCH);
     let mut s = Sweep::default();
     let mut dirs: Vec<PathBuf> = Vec::new();
 
     for root in roots {
-        let Ok(root) = root.canonicalize() else { continue };
+        let Ok(root) = root.canonicalize() else {
+            continue;
+        };
         if !root.is_dir() {
             continue;
         }
         let mut stack = vec![root.clone()];
         while let Some(dir) = stack.pop() {
-            let Ok(rd) = std::fs::read_dir(&dir) else { continue };
+            let Ok(rd) = std::fs::read_dir(&dir) else {
+                continue;
+            };
             for entry in rd.flatten() {
                 let path = entry.path();
                 let Ok(ft) = entry.file_type() else { continue };
@@ -207,10 +213,14 @@ fn sweep(roots: &[PathBuf], max_age: Duration, log: &Path, trigger: &str) -> Swe
 /// Live counts for `root`: (files, bytes, files older than cutoff).
 fn root_stats(root: &Path, cutoff: SystemTime) -> (u64, u64, u64) {
     let mut out = (0u64, 0u64, 0u64);
-    let Ok(root) = root.canonicalize() else { return out };
+    let Ok(root) = root.canonicalize() else {
+        return out;
+    };
     let mut stack = vec![root];
     while let Some(dir) = stack.pop() {
-        let Ok(rd) = std::fs::read_dir(&dir) else { continue };
+        let Ok(rd) = std::fs::read_dir(&dir) else {
+            continue;
+        };
         for entry in rd.flatten() {
             let Ok(ft) = entry.file_type() else { continue };
             if ft.is_symlink() {
@@ -277,7 +287,9 @@ fn run_command(argv: &[&str], cfg: &Config) -> String {
             Err(e) => format!("couldn't enable: {e}"),
         },
         _ => {
-            let cutoff = SystemTime::now().checked_sub(cfg.max_age).unwrap_or(UNIX_EPOCH);
+            let cutoff = SystemTime::now()
+                .checked_sub(cfg.max_age)
+                .unwrap_or(UNIX_EPOCH);
             let mut lines = vec![format!(
                 "gray-clean {} — {} — max age {}h — sweeping: {}",
                 env!("CARGO_PKG_VERSION"),
@@ -298,11 +310,7 @@ fn run_command(argv: &[&str], cfg: &Config) -> String {
                 ));
             }
             if let Ok(content) = std::fs::read_to_string(&cfg.log) {
-                if let Some(last) = content
-                    .lines()
-                    .rev()
-                    .find(|l| l.contains("\"sweep\""))
-                {
+                if let Some(last) = content.lines().rev().find(|l| l.contains("\"sweep\"")) {
                     lines.push(format!("last sweep: {last}"));
                 }
             }
@@ -355,7 +363,9 @@ fn main() -> std::io::Result<()> {
     let mut stdout = std::io::stdout();
     for line in stdin.lock().lines() {
         let line = line?;
-        let Ok(req) = serde_json::from_str::<Value>(&line) else { continue };
+        let Ok(req) = serde_json::from_str::<Value>(&line) else {
+            continue;
+        };
         let (reply, exit) = handle(&req, &cfg);
         if let Some(reply) = reply {
             writeln!(stdout, "{reply}")?;
@@ -379,11 +389,8 @@ mod tests {
     }
 
     fn tmpdir(tag: &str) -> PathBuf {
-        let d = std::env::temp_dir().join(format!(
-            "gray-clean-test-{}-{}",
-            std::process::id(),
-            tag
-        ));
+        let d =
+            std::env::temp_dir().join(format!("gray-clean-test-{}-{}", std::process::id(), tag));
         let _ = std::fs::remove_dir_all(&d);
         std::fs::create_dir_all(&d).unwrap();
         d
@@ -439,7 +446,12 @@ mod tests {
         std::fs::create_dir_all(home.join("tmp/keep")).unwrap();
         std::fs::write(home.join("tmp/keep/f.txt"), "new").unwrap();
         // A century of max age → nothing is "old".
-        let s = sweep(&cfg.roots, Duration::from_secs(3600 * 24 * 365 * 100), &cfg.log, "test");
+        let s = sweep(
+            &cfg.roots,
+            Duration::from_secs(3600 * 24 * 365 * 100),
+            &cfg.log,
+            "test",
+        );
         assert_eq!(s.files, 0);
         assert!(home.join("tmp/keep/f.txt").exists());
         let _ = std::fs::remove_dir_all(&home);
@@ -501,7 +513,11 @@ mod tests {
     fn clean_status_reports_roots() {
         let (cfg, home) = tmpcfg("status");
         std::fs::create_dir_all(home.join("spill")).unwrap();
-        let r = call(&cfg, "command/run", json!({"name":"/clean","argv":["status"]}));
+        let r = call(
+            &cfg,
+            "command/run",
+            json!({"name":"/clean","argv":["status"]}),
+        );
         let text = r["result"]["text"].as_str().unwrap();
         assert!(text.contains("gray-clean") && text.contains("spill") && text.contains("tmp"));
         let _ = std::fs::remove_dir_all(&home);
