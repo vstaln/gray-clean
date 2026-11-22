@@ -228,13 +228,13 @@ fn root_stats(root: &Path, cutoff: SystemTime) -> (u64, u64, u64) {
             }
             if ft.is_dir() {
                 stack.push(entry.path());
-            } else if ft.is_file() {
-                if let Ok(md) = entry.metadata() {
-                    out.0 += 1;
-                    out.1 += md.len();
-                    if md.modified().map(|m| m < cutoff).unwrap_or(false) {
-                        out.2 += 1;
-                    }
+            } else if ft.is_file()
+                && let Ok(md) = entry.metadata()
+            {
+                out.0 += 1;
+                out.1 += md.len();
+                if md.modified().map(|m| m < cutoff).unwrap_or(false) {
+                    out.2 += 1;
                 }
             }
         }
@@ -309,10 +309,10 @@ fn run_command(argv: &[&str], cfg: &Config) -> String {
                     fmt_size(bytes),
                 ));
             }
-            if let Ok(content) = std::fs::read_to_string(&cfg.log) {
-                if let Some(last) = content.lines().rev().find(|l| l.contains("\"sweep\"")) {
-                    lines.push(format!("last sweep: {last}"));
-                }
+            if let Ok(content) = std::fs::read_to_string(&cfg.log)
+                && let Some(last) = content.lines().rev().find(|l| l.contains("\"sweep\""))
+            {
+                lines.push(format!("last sweep: {last}"));
             }
             lines.join("\n")
         }
